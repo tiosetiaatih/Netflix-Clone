@@ -1,33 +1,54 @@
-Deploy Netflix Clone on Cloud using Jenkins - DevSecOps Project!
+# NETFLIX-CLONE
+Deploy Netflix Clone on Container/Kubernetes - DevSecOps Project!
+
+## Requirement
+- Local VM Instance (OS Rocky Linux)
+- Netflix-GIT > ``` https://github.com/tiosetiaatih/Netflix-Clone.git ```
+- Docker & docker-compose
+- Trivy
+- Sonarqube
+- Microk8s (Kubernetes Development)
+
+## Kubernetes Services
+- Coredns
+- Calico-node
+- Metallb
+- Prometheus
+- ArgoCD
 
 ### **Phase 1: Initial Setup and Deployment**
 
-**Step 1: Launch EC2 (Ubuntu 22.04):**
+**Step 1: Launch VM Instance On Premise (Rocky Linux):**
 
-- Provision an EC2 instance on AWS with Ubuntu 22.04.
+- Provision an VM Instance with OS Rocky Linux release 8.10 (Green Obsidian)
 - Connect to the instance using SSH.
 
 **Step 2: Clone the Code:**
 
 - Update all the packages and then clone the code.
-- Clone your application's code repository onto the EC2 instance:
+- Clone your application's code repository into the VM instance:
     
     ```bash
-    git clone https://github.com/Aakibgithuber/Deploy-Netflix-Clone-on-Kubernetes.git
+    git clone https://github.com/tiosetiaatih/Netflix-Clone.git
     ```
     
+**Step 3: Install Docker & Docker-compose and Run the App Using a Container:**
 
-**Step 3: Install Docker and Run the App Using a Container:**
-
-- Set up Docker on the EC2 instance:
+- Set up Docker on the VM instance:
     
     ```bash
-    
-    sudo apt-get update
-    sudo apt-get install docker.io -y
-    sudo usermod -aG docker $USER  # Replace with your system's username, e.g., 'ubuntu'
+    #Docker
+    sudo yum update
+    sudo yum install docker.io -y
+    sudo usermod -aG docker $USER  # Replace with your system's username, e.g., 'docker'
     newgrp docker
     sudo chmod 777 /var/run/docker.sock
+
+    #Docker-compose
+    sudo curl -SL https://github.com/docker/compose/releases/download/v2.30.3/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+    sudo chmod +x /usr/local/bin/docker-compose
+    sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+    docker-compose --version
     ```
     
 - Build and run your application using Docker containers:
@@ -61,32 +82,29 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
 **Phase 2: Security**
 
 1. **Install SonarQube and Trivy:**
-    - Install SonarQube and Trivy on the EC2 instance to scan for vulnerabilities.
+    - Install SonarQube and Trivy on the VM instance to scan for vulnerabilities.
         
         sonarqube
         ```
         docker run -d --name sonar -p 9000:9000 sonarqube:lts-community
         ```
-        
-        
+
         To access: 
         
         publicIP:9000 (by default username & password is admin)
         
         To install Trivy:
         ```
-        sudo apt-get install wget apt-transport-https gnupg lsb-release
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update
-        sudo apt-get install trivy        
+        sudo yum install wget gnupg2 redhat-lsb-core -y
+        sudo yum update
+        sudo yum install trivy -y
         ```
         
         to scan image using trivy
         ```
         trivy image <imageid>
+        example: trivy image tiosetiaatih/netflix:latest
         ```
-        
         
 2. **Integrate SonarQube and Configure:**
     - Integrate SonarQube with your CI/CD pipeline.
@@ -95,61 +113,43 @@ docker build --build-arg TMDB_V3_API_KEY=<your-api-key> -t netflix .
 **Phase 3: CI/CD Setup**
 
 1. **Install Jenkins for Automation:**
-    - Install Jenkins on the EC2 instance to automate deployment:
+    - Install Jenkins on the VM instance to automate deployment:
     Install Java
     
     ```bash
-    sudo apt update
-    sudo apt install fontconfig openjdk-17-jre
+    sudo yum update
+    sudo yum install java-17-openjdk java-17-openjdk-devel -y
     java -version
-    openjdk version "17.0.8" 2023-07-18
-    OpenJDK Runtime Environment (build 17.0.8+7-Debian-1deb12u1)
-    OpenJDK 64-Bit Server VM (build 17.0.8+7-Debian-1deb12u1, mixed mode, sharing)
+    openjdk version "1.8.0_432"
+    OpenJDK Runtime Environment (build 1.8.0_432-b06)
+    OpenJDK 64-Bit Server VM (build 25.432-b06, mixed mode)
     
     #jenkins
-    sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
-    https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
-    echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-    https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-    /etc/apt/sources.list.d/jenkins.list > /dev/null
-    sudo apt-get update
-    sudo apt-get install jenkins
-    sudo systemctl start jenkins
-    sudo systemctl enable jenkins
+    docker-compose up -d jenkins (look at docker-compose.yaml)
     ```
     
-    - Access Jenkins in a web browser using the public IP of your EC2 instance.
+    - Access Jenkins in a web browser using the public IP of your VM instance.
         
-        publicIp:8080
+        localIP:8080
         
 2. **Install Necessary Plugins in Jenkins:**
-
-Goto Manage Jenkins →Plugins → Available Plugins →
-
-Install below plugins
-
-1 Eclipse Temurin Installer (Install without restart)
-
-2 SonarQube Scanner (Install without restart)
-
-3 NodeJs Plugin (Install Without restart)
-
-4 Email Extension Plugin
+    Goto Manage Jenkins →Plugins → Available Plugins →
+    Install below plugins
+    1. Eclipse Temurin Installer (Install without restart)
+    2. SonarQube Scanner (Install without restart)
+    3. NodeJs Plugin (Install Without restart)
+    4. Email Extension Plugin
 
 ### **Configure Java and Nodejs in Global Tool Configuration**
 
 Goto Manage Jenkins → Tools → Install JDK(17) and NodeJs(16)→ Click on Apply and Save
 
-
 ### SonarQube
 
-Create the token
-
-Goto Jenkins Dashboard → Manage Jenkins → Credentials → Add Secret Text. It should look like this
-
-After adding sonar token
-
-Click on Apply and Save
+- Create the token
+- Goto Jenkins Dashboard → Manage Jenkins → Credentials → Add Secret Text. It should look like this
+- After adding sonar token
+- Click on Apply and Save
 
 **The Configure System option** is used in Jenkins to configure different server
 
@@ -180,7 +180,7 @@ pipeline {
         }
         stage('Checkout from Git') {
             steps {
-                git branch: 'main', url: 'https://github.com/Aakibgithuber/Deploy-Netflix-Clone-on-Kubernetes.git'
+                git branch: 'main', url: 'https://github.com/tiosetiaatih/Netflix-Clone.git'
             }
         }
         stage("Sonarqube Analysis") {
@@ -270,7 +270,7 @@ pipeline{
         }
         stage('Checkout from Git'){
             steps{
-                git branch: 'main', url: 'https://github.com/Aakibgithuber/Deploy-Netflix-Clone-on-Kubernetes.git'
+                git branch: 'main', url: 'https://github.com/tiosetiaatih/Netflix-Clone.git'
             }
         }
         stage("Sonarqube Analysis "){
@@ -309,20 +309,20 @@ pipeline{
                 script{
                    withDockerRegistry(credentialsId: 'docker', toolName: 'docker'){   
                        sh "docker build --build-arg TMDB_V3_API_KEY=<yourapikey> -t netflix ."
-                       sh "docker tag netflix aakibkhan1212/netflix:latest "
-                       sh "docker push aakibkhan1212/netflix:latest "
+                       sh "docker tag netflix tiosetiaatih/netflix:latest "
+                       sh "docker push tiosetiaatih/netflix:latest "
                     }
                 }
             }
         }
         stage("TRIVY"){
             steps{
-                sh "trivy image nasi101/netflix:latest > trivyimage.txt" 
+                sh "trivy image tiosetiaatih/netflix:latest > trivyimage.txt" 
             }
         }
         stage('Deploy to container'){
             steps{
-                sh 'docker run -d --name netflix -p 8081:80 nasi101/netflix:latest'
+                sh 'docker run -d --name netflix -p 8081:80 tiosetiaatih/netflix:latest'
             }
         }
     }
@@ -546,8 +546,8 @@ sudo systemctl restart jenkins
 First, ensure that all necessary dependencies are installed:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y apt-transport-https software-properties-common
+sudo yum update
+sudo yum install -y apt-transport-https software-properties-common
 ```
 
 **Step 2: Add the GPG Key:**
@@ -571,8 +571,8 @@ echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/a
 Update the package list and install Grafana:
 
 ```bash
-sudo apt-get update
-sudo apt-get -y install grafana
+sudo yum update
+sudo yum -y install grafana
 ```
 
 **Step 5: Enable and Start Grafana Service:**
@@ -730,5 +730,5 @@ To deploy an application with ArgoCD, you can follow these steps, which I'll out
 
 **Phase 7: Cleanup**
 
-1. **Cleanup AWS EC2 Instances:**
-    - Terminate AWS EC2 instances that are no longer needed.
+1. **Cleanup Local VM Instances:**
+    - Terminate Local VM instances that are no longer needed.
